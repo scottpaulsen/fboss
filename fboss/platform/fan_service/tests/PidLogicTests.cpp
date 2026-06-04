@@ -163,3 +163,43 @@ TEST(IncrementalPIDLogicTest, Basic) {
   auto newPwm5 = incrementalPidLogic1.calculatePwm(44);
   ASSERT_LT(newPwm5, newPwm4);
 }
+
+// Regression test for the integral-windup divide-by-zero bug that affects
+// platforms running positional P/PD-only control with ki = 0 (e.g.
+// morgan800cc). Prior to the fix, the anti-windup reset
+// `integral_ = pwmDelta / ki` produced +/-inf when ki == 0, and on subsequent
+// iterations ki * integral_ evaluated to 0 * inf = NaN, freezing the fan
+// response to temperature changes.
+TEST(PIDLogicTest, ZeroKiNoNanWindup) {
+  PidSetting pidSetting;
+  pidSetting.kp() = -1;
+  pidSetting.ki() = 0; // PD-only control, as configured on morgan800cc
+  pidSetting.kd() = -17;
+  pidSetting.setPoint() = 60;
+  pidSetting.negHysteresis() = 2;
+  pidSetting.posHysteresis() = 0;
+
+  auto pidLogic = PidLogic(pidSetting, 5);
+  pidLogic.updateLastPwm(40);
+
+  // Drive the loop through a sequence that crosses the setPoint in both
+  // directions. Without the fix, the first call with measurement <= maxVal
+  // poisons integral_ with inf, and the next call that produces a non-zero
+  // error returns NaN -> 0 (after int16_t cast) regardless of temperature.
+  pidLogic.calculatePwm(50); // below setPoint -> would trigger windup reset
+  pidLogic.calculatePwm(55); // still below setPoint
+  auto pwmHot = pidLogic.calculatePwm(70); // hot: PWM must rise
+
+  // With ki = 0 the integral term contributes nothing; the loop must still
+  // respond to the error and derivative terms.
+  EXPECT_GT(pwmHot, 0);
+  EXPECT_LE(pwmHot, 100);
+
+  // Drive temperature back down; PWM must come back down (not stuck at NaN).
+  pidLogic.calculatePwm(60);
+  pidLogic.calculatePwm(55);
+  auto pwmCold = pidLogic.calculatePwm(50);
+  EXPECT_GE(pwmCold, 0);
+  EXPECT_LE(pwmCold, 100);
+  EXPECT_LT(pwmCold, pwmHot);
+}

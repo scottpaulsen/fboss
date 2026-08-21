@@ -20,6 +20,7 @@
 #include "fboss/agent/gen-cpp2/switch_config_types.h"
 #include "fboss/agent/hw/HwPortFb303Stats.h"
 #include "fboss/agent/hw/HwSysPortFb303Stats.h"
+#include "fboss/agent/hw/gen-cpp2/hardware_stats_constants.h"
 #include "fboss/agent/hw/gen-cpp2/hardware_stats_types.h"
 #include "fboss/agent/hw/sai/api/AclApi.h"
 #include "fboss/agent/hw/sai/api/AdapterKeySerializers.h"
@@ -2689,8 +2690,19 @@ void SaiSwitch::updatePcsInfo(
     }
 
     std::optional<uint64_t> correctedBitsFromHw = std::nullopt;
+    std::optional<uint64_t> correctedSymbolsFromHw = std::nullopt;
     if (managerTable_->portManager().fecCorrectedBitsSupported(swPort)) {
-      correctedBitsFromHw = *(fb303PortStat->portStats().fecCorrectedBits_());
+      auto correctedBits = *(fb303PortStat->portStats().fecCorrectedBits_());
+      if (correctedBits != hardware_stats_constants::STAT_UNINITIALIZED()) {
+        correctedBitsFromHw = correctedBits;
+      }
+    }
+    if (managerTable_->portManager().fecCorrectedSymbolsSupported(swPort)) {
+      auto correctedSymbols =
+          *(fb303PortStat->portStats().fecCorrectedSymbols_());
+      if (correctedSymbols != hardware_stats_constants::STAT_UNINITIALIZED()) {
+        correctedSymbolsFromHw = correctedSymbols;
+      }
     }
 
     auto now = duration_cast<seconds>(system_clock::now().time_since_epoch());
@@ -2698,6 +2710,7 @@ void SaiSwitch::updatePcsInfo(
         rsFec, /* current RsFecInfo to update */
         lastRsFec, /* previous RsFecInfo */
         correctedBitsFromHw, /* correctedBitsFromHw */
+        correctedSymbolsFromHw, /* correctedSymbolsFromHw */
         now.count() -
             *lastPhyInfo.state()->timeCollected(), /* timeDeltaInSeconds */
         fecMode, /* operational FecMode */
@@ -5112,6 +5125,9 @@ std::string SaiSwitch::listObjects(
         objTypes.push_back(SAI_OBJECT_TYPE_NEXT_HOP_GROUP);
         objTypes.push_back(SAI_OBJECT_TYPE_NEXT_HOP_GROUP_MEMBER);
         break;
+      case HwObjectType::NEXT_HOP_GROUP_MEMBER:
+        objTypes.push_back(SAI_OBJECT_TYPE_NEXT_HOP_GROUP_MEMBER);
+        break;
       case HwObjectType::ROUTER_INTERFACE:
         objTypes.push_back(SAI_OBJECT_TYPE_ROUTER_INTERFACE);
         break;
@@ -5442,7 +5458,8 @@ void SaiSwitch::processFlowletSwitchingConfigAdded(
     switchManager.setArsProfile(arsProfileHandlePtr->arsProfile->adapterKey());
 
     // create the ARS object and attach to all ECMP groups
-    arsManager.addArs(newFlowletConfig);
+    arsManager.addArs(
+        newFlowletConfig, delta.newState()->getL3EcmpIngressPortPrune());
     auto arsHandlePtr = arsManager.getArsHandle();
     CHECK(arsHandlePtr);
     nextHopGroupManager.updateArsModeAll(newFlowletConfig);
@@ -5485,7 +5502,10 @@ void SaiSwitch::processFlowletSwitchingConfigChanged(
       nextHopGroupManager.setMinWidthForArsVirtualGroup(
           newFlowletConfig->getMinWidthForArsVirtualGroup());
       arsProfileManager.changeArsProfile(oldFlowletConfig, newFlowletConfig);
-      arsManager.changeArs(oldFlowletConfig, newFlowletConfig);
+      arsManager.changeArs(
+          oldFlowletConfig,
+          newFlowletConfig,
+          delta.newState()->getL3EcmpIngressPortPrune());
     }
   } else if (newFlowletConfig && !oldFlowletConfig) {
     nextHopGroupManager.updateArsModeAll(newFlowletConfig);

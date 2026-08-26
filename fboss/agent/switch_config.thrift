@@ -1734,6 +1734,12 @@ struct Interface {
    * These fields contains information of remote GPU */
   18: optional string desiredPeerName;
   19: optional string desiredPeerAddressIPv6;
+  /* valid only for port type of interface. Holds the key of the
+   * cfg::AggregatePort this interface is bound to, for a port router interface
+   * over an aggregate port. Exactly one of portID and aggregatePortID is set.
+   * Kept separate from portID because AggregatePortID and PortID share a
+   * numeric space, so a single field could not be disambiguated. */
+  20: optional i32 aggregatePortID;
 }
 
 struct StaticRouteWithNextHops {
@@ -2403,6 +2409,11 @@ struct PortFlowletConfig {
 
 // Behavior for LLR-desired frames while the LLR TX state machine is in the
 // INIT or FLUSH state (UE Spec 1.0.2 section 5.1.5).
+//
+// The spec permits all three in both states. Tomahawk Ultra accepts only INIT
+// in {BLOCK, BEST_EFFORT} and FLUSH in {BLOCK}, rejecting anything else at SAI
+// profile create. Broadcom confirmed in CS00012472686 that this is a hardware
+// design limit rather than an SDK gap, and that TU2 behaves the same.
 enum LlrFrameAction {
   DISCARD = 0,
   BLOCK = 1,
@@ -2432,10 +2443,9 @@ struct LlrConfig {
   6: i64 dataAgeTimeout;
   // Action for LLR-desired frames in INIT state (llr_init_behavior).
   7: LlrFrameAction initFrameAction = LlrFrameAction.BEST_EFFORT;
-  // Action for LLR-desired frames in FLUSH state (llr_flush_behavior).
-  // Tomahawk Ultra (the only LLR-capable ASIC today) only supports BLOCK in
-  // FLUSH; other values are rejected at SAI profile create, so BLOCK is the
-  // default.
+  // Action for LLR-desired frames in FLUSH state (llr_flush_behavior). BLOCK is
+  // the only value Tomahawk Ultra accepts, hence the default; see
+  // LlrFrameAction.
   8: LlrFrameAction flushFrameAction = LlrFrameAction.BLOCK;
   // Re-initialize LLR on FLUSH (re_init_on_discard).
   9: bool reInitOnFlush = false;

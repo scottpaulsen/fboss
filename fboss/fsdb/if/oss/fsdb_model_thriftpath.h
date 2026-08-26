@@ -1594,6 +1594,7 @@ class ChildThriftPath<::facebook::fboss::cfg::Interface, ::facebook::fboss::fsdb
     STRUCT_CHILD_GETTERS(portID, 17);
     STRUCT_CHILD_GETTERS(desiredPeerName, 18);
     STRUCT_CHILD_GETTERS(desiredPeerAddressIPv6, 19);
+    STRUCT_CHILD_GETTERS(aggregatePortID, 20);
 };
 
 
@@ -2927,6 +2928,7 @@ class ChildThriftPath<::facebook::neteng::fboss::bgp::thrift::TBgpPath, ::facebo
     STRUCT_CHILD_GETTERS(igp_cost, 26);
     STRUCT_CHILD_GETTERS(path_id_to_send, 27);
     STRUCT_CHILD_GETTERS(is_inactive, 28);
+    STRUCT_CHILD_GETTERS(backup_addr, 29);
 };
 
 
@@ -6600,6 +6602,8 @@ class ChildThriftPath<::facebook::bgp::thrift::BgpSettingConfig, ::facebook::fbo
     STRUCT_CHILD_GETTERS(next_hop_tracking_use_openr_igp_cost, 17);
     STRUCT_CHILD_GETTERS(enable_addpath_gr_reconcile, 18);
     STRUCT_CHILD_GETTERS(enable_legacy_v4_nlri_encoding, 19);
+    STRUCT_CHILD_GETTERS(enable_stream_subscriber_backpressure, 20);
+    STRUCT_CHILD_GETTERS(enable_netlink_dampening, 21);
 };
 
 
@@ -7336,6 +7340,7 @@ class ChildThriftPath<::facebook::fboss::state::InterfaceFields, ::facebook::fbo
     STRUCT_CHILD_GETTERS(portId, 23);
     STRUCT_CHILD_GETTERS(desiredPeerName, 24);
     STRUCT_CHILD_GETTERS(desiredPeerAddressIPv6, 25);
+    STRUCT_CHILD_GETTERS(aggregatePortId, 26);
 };
 
 
@@ -7589,6 +7594,8 @@ class ChildThriftPath<::facebook::fboss::state::MySidFields, ::facebook::fboss::
     STRUCT_CHILD_GETTERS(clientId, 6);
     STRUCT_CHILD_GETTERS(isV6, 7);
     STRUCT_CHILD_GETTERS(namedNextHopGroup, 8);
+    STRUCT_CHILD_GETTERS(backupResolvedNextHopsId, 9);
+    STRUCT_CHILD_GETTERS(backupUnresolveNextHopsId, 12);
 };
 
 

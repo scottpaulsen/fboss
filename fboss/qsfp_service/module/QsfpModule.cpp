@@ -505,6 +505,11 @@ void QsfpModule::updateCachedTransceiverInfoLocked(ModuleStatus moduleStatus) {
           TransceiverErrorState::INVALID_IDENTIFIER);
       QSFP_LOG(ERR, this) << "Invalid module identifier";
     }
+
+    if (hasInvalidBankSelect()) {
+      tcvrState.errorStates()->insert(
+          TransceiverErrorState::INVALID_BANK_SELECT);
+    }
     auto currentStatus = getModuleStatus();
     // Use the input `moduleStatus` as the reference to update the
     // `cmisStateChanged` for currentStatus, which will be used in the
@@ -557,6 +562,14 @@ void QsfpModule::updateCachedTransceiverInfoLocked(ModuleStatus moduleStatus) {
 
     tcvrState.timeCollected() = lastRefreshTime_;
     tcvrStats.timeCollected() = lastRefreshTime_;
+
+    const auto thermalMargins = getThermalMargins();
+    if (thermalMargins.dspTempMargin) {
+      tcvrStats.dspTempMargin() = *thermalMargins.dspTempMargin;
+    }
+    if (thermalMargins.laserTempMargin) {
+      tcvrStats.laserTempMargin() = *thermalMargins.laserTempMargin;
+    }
 
     tcvrStats.remediationCounter() = numRemediation_;
     tcvrState.eepromCsumValid() = verifyEepromChecksums();

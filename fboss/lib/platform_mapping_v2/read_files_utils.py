@@ -473,7 +473,7 @@ def read_si_settings(  # noqa: C901
         # pyrefly: ignore [missing-attribute]
         if row[Column.CABLE_LENGTH]:
             # pyrefly: ignore [missing-attribute]
-            cable_length = float(row[Column.MEDIA_TYPE])
+            cable_length = float(row[Column.CABLE_LENGTH])
 
         # Add optics settings if present in the csv file.
         driver_peaking = None
@@ -513,7 +513,7 @@ def read_si_settings(  # noqa: C901
         )
 
         tx_kwargs: Dict[str, Any] = {}
-        if chip.core_type == CoreType.G200:
+        if chip.core_type in (CoreType.G200, CoreType.P200):
             # pyrefly: ignore [missing-attribute]
             if "TX_PRE3" in column_names and row[Column.TX_PRE3]:
                 # pyrefly: ignore [missing-attribute]
